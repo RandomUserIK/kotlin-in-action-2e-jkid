@@ -18,7 +18,6 @@ class MapTest {
 		assertEquals(json, serialize(bookStore))
 	}
 
-	@Ignore
 	@Test
 	fun testDeserialization() {
 		assertEquals(bookStore, deserialize(json))
