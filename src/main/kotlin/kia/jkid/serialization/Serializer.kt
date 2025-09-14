@@ -1,9 +1,11 @@
 package kia.jkid.serialization
 
 import kia.jkid.CustomSerializer
+import kia.jkid.DateSerializer
 import kia.jkid.JsonExclude
 import kia.jkid.JsonName
 import kia.jkid.ValueSerializer
+import kia.jkid.exercise.DateFormat
 import kia.jkid.joinToStringBuilder
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -16,78 +18,85 @@ fun serialize(obj: Any): String = buildString { serializeObject(obj) }
 
 /* the first implementation discussed in the book */
 private fun StringBuilder.serializeObjectWithoutAnnotation(obj: Any) {
-    val kClass = obj::class as KClass<Any>
-    val properties = kClass.memberProperties
+	val kClass = obj::class as KClass<Any>
+	val properties = kClass.memberProperties
 
-    properties.joinToStringBuilder(this, prefix = "{", postfix = "}") { prop ->
-        serializeString(prop.name)
-        append(": ")
-        serializePropertyValue(prop.get(obj))
-    }
+	properties.joinToStringBuilder(this, prefix = "{", postfix = "}") { prop ->
+		serializeString(prop.name)
+		append(": ")
+		serializePropertyValue(prop.get(obj))
+	}
 }
 
 private fun StringBuilder.serializeObject(obj: Any) {
-    (obj::class as KClass<Any>)
-        .memberProperties
-        .filter { it.findAnnotation<JsonExclude>() == null }
-        .joinToStringBuilder(this, prefix = "{", postfix = "}") {
-            serializeProperty(it, obj)
-        }
+	(obj::class as KClass<Any>)
+		.memberProperties
+		.filter { it.findAnnotation<JsonExclude>() == null }
+		.joinToStringBuilder(this, prefix = "{", postfix = "}") {
+			serializeProperty(it, obj)
+		}
 }
 
 private fun StringBuilder.serializeProperty(
-    prop: KProperty1<Any, *>, obj: Any
+	prop: KProperty1<Any, *>, obj: Any,
 ) {
-    val jsonNameAnn = prop.findAnnotation<JsonName>()
-    val propName = jsonNameAnn?.name ?: prop.name
-    serializeString(propName)
-    append(": ")
+	val jsonNameAnn = prop.findAnnotation<JsonName>()
+	val propName = jsonNameAnn?.name ?: prop.name
+	serializeString(propName)
+	append(": ")
 
-    val value = prop.get(obj)
-    val jsonValue = prop.getSerializer()?.toJsonValue(value) ?: value
-    serializePropertyValue(jsonValue)
+	val value = prop.get(obj)
+	val jsonValue = prop.getSerializer()?.toJsonValue(value) ?: value
+	serializePropertyValue(jsonValue)
 }
 
 fun KProperty<*>.getSerializer(): ValueSerializer<Any?>? {
-    val customSerializerAnn = findAnnotation<CustomSerializer>() ?: return null
-    val serializerClass = customSerializerAnn.serializerClass
+	val dateFormatAnn = findAnnotation<DateFormat>()
 
-    val valueSerializer = serializerClass.objectInstance
-        ?: serializerClass.createInstance()
-    @Suppress("UNCHECKED_CAST")
-    return valueSerializer as ValueSerializer<Any?>
+	if (dateFormatAnn != null) {
+		@Suppress("UNCHECKED_CAST")
+		return DateSerializer(dateFormatAnn.format) as ValueSerializer<Any?>?
+	}
+
+	val customSerializerAnn = findAnnotation<CustomSerializer>() ?: return null
+	val serializerClass = customSerializerAnn.serializerClass
+
+	val valueSerializer = serializerClass.objectInstance
+		?: serializerClass.createInstance()
+	@Suppress("UNCHECKED_CAST")
+	return valueSerializer as ValueSerializer<Any?>
 }
 
 private fun StringBuilder.serializePropertyValue(value: Any?) {
-    when (value) {
-        null -> append("null")
-        is String -> serializeString(value)
-        is Number, is Boolean -> append(value.toString())
-        is List<*> -> serializeList(value)
-        else -> serializeObject(value)
-    }
+	when (value) {
+		null -> append("null")
+		is String -> serializeString(value)
+		is Number, is Boolean -> append(value.toString())
+		is List<*> -> serializeList(value)
+		else -> serializeObject(value)
+	}
 }
 
 private fun StringBuilder.serializeList(data: List<Any?>) {
-    data.joinToStringBuilder(this, prefix = "[", postfix = "]") {
-        serializePropertyValue(it)
-    }
+	data.joinToStringBuilder(this, prefix = "[", postfix = "]") {
+		serializePropertyValue(it)
+	}
 }
 
 private fun StringBuilder.serializeString(s: String) {
-    append('\"')
-    s.forEach { append(it.escape()) }
-    append('\"')
+	append('\"')
+	s.forEach { append(it.escape()) }
+	append('\"')
 }
 
 private fun Char.escape(): Any =
-    when (this) {
-        '\\' -> "\\\\"
-        '\"' -> "\\\""
-        '\b' -> "\\b"
-        '\u000C' -> "\\f"
-        '\n' -> "\\n"
-        '\r' -> "\\r"
-        '\t' -> "\\t"
-        else -> this
-    }
+	when (this) {
+		'\\' -> "\\\\"
+		'\"' -> "\\\""
+		'\b' -> "\\b"
+		'\u000C' -> "\\f"
+		'\n' -> "\\n"
+		'\r' -> "\\r"
+		'\t' -> "\\t"
+		else -> this
+	}

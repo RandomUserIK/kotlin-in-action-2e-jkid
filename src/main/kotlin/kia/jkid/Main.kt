@@ -1,9 +1,61 @@
 package kia.jkid
 
-fun main(args: Array<String>) {
-    println("Hello World!")
+import kia.jkid.exercise.DateFormat
+import kia.jkid.serialization.serialize
+import java.time.Instant
+import java.util.*
+import kotlin.reflect.full.memberProperties
 
-    // Try adding program arguments via Run/Debug configuration.
-    // Learn more about running applications: https://www.jetbrains.com/help/idea/running-applications.html.
-    println("Program arguments: ${args.joinToString()}")
+class Person(val name: String, val age: Int)
+
+interface User {
+	val username: String
+}
+
+fun foo(x: Int) = println(x)
+
+fun sum(x: Int, y: Int) = x + y
+
+var counter = 0
+
+data class PersonWithBirthDate(
+	val name: String,
+	@DateFormat("dd-MM-yyyy") val birthDate: Date,
+)
+
+fun main(args: Array<String>) {
+	val person = Person("Alice", 29)
+	val kClass = person::class
+
+	println(kClass.simpleName)
+	println("Member properties:")
+	kClass.memberProperties.forEach { println(it) }
+
+	val anonymous = object : User {
+		override val username: String
+			get() = "anonymous"
+	}
+
+	println(anonymous::class.simpleName) // null - since it is an anonymous object
+
+	val kFunction = ::foo
+	kFunction.call(42) // 42 - does not prevent to call with incorrect number of parameters
+	kFunction(43) // 43
+
+	val kFunction2 = ::sum
+	println(kFunction2.invoke(1, 2) + kFunction2.invoke(3, 4)) // 10
+	// kFunction2(1) // error - no value passed for parameter p2
+
+	val kProperty = ::counter
+	kProperty.setter.call(21)
+	println(kProperty.get()) // 21
+
+	val memberProperty = Person::age
+	println(memberProperty.get(person)) // 29
+
+	val personWithBirthDate = PersonWithBirthDate(
+		"Bob",
+		Date.from(Instant.parse("1990-01-01T00:00:00Z"))
+	)
+	println(serialize(personWithBirthDate))
 }
