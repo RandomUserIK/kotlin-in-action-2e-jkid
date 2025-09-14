@@ -1,5 +1,9 @@
 package kia.jkid
 
+import kia.jkid.exercise.DateFormat
+import kia.jkid.serialization.serialize
+import java.time.Instant
+import java.util.*
 import kotlin.reflect.full.memberProperties
 
 class Person(val name: String, val age: Int)
@@ -13,6 +17,11 @@ fun foo(x: Int) = println(x)
 fun sum(x: Int, y: Int) = x + y
 
 var counter = 0
+
+data class PersonWithBirthDate(
+	val name: String,
+	@DateFormat("dd-MM-yyyy") val birthDate: Date,
+)
 
 fun main(args: Array<String>) {
 	val person = Person("Alice", 29)
@@ -43,4 +52,10 @@ fun main(args: Array<String>) {
 
 	val memberProperty = Person::age
 	println(memberProperty.get(person)) // 29
+
+	val personWithBirthDate = PersonWithBirthDate(
+		"Bob",
+		Date.from(Instant.parse("1990-01-01T00:00:00Z"))
+	)
+	println(serialize(personWithBirthDate))
 }
